@@ -1,0 +1,60 @@
+{{define "relation.geo"}}
+{{$relation := .}}
+{{$primaryField := $relation.PrimaryField}}
+//! redis relation pair
+func (m *_{{$relation.Name}}RedisMgr) LocationAdd(relation *{{$relation.Name}}) error {	
+	return m.GeoAdd(geoOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", relation.Key), &redis.GeoLocation{
+		Longitude: relation.Longitude,
+		Latitude:  relation.Latitude,
+		Name:      fmt.Sprint(relation.Value),
+	}).Err()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) LocationRadius(key string, longitude float64, latitude float64, query *redis.GeoRadiusQuery) ([]*{{$relation.Name}}, error) {
+	locations, err := m.GeoRadius(geoOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key), longitude, latitude, query).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	relations := []*{{$relation.Name}}{}
+	for _, location := range locations {
+		relation := m.New{{$relation.Name}}(key)
+		relation.Longitude = location.Longitude
+		relation.Latitude = location.Latitude
+		{{- if $relation.ValueField.IsNeedTransform}}
+			var val {{$relation.ValueField.GetTransform.TypeOrigin}}
+			if err := orm.StringScan(location.Name, &val); err != nil {
+				return nil, err
+			}
+			relation.{{$relation.ValueField.Name}} = {{- printf $relation.ValueField.GetTransform.ConvertTo "val"}}
+		{{- else}}
+		if err := orm.StringScan(location.Name, &relation.Value); err != nil {
+			return nil, err
+		}
+		{{- end}}
+		relations = append(relations, relation)
+	}
+	return relations, nil
+}
+
+func (m *_{{$relation.Name}}RedisMgr) LocationRem(relation *{{$relation.Name}}) error {
+	return m.ZRem(geoOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", relation.Key), fmt.Sprint(relation.Value)).Err()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) LocationDel(key string) error {
+	return m.Del(geoOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key)).Err()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) Clear() error {
+	strs, err := m.Keys(geoOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", "*")).Result()
+	if err != nil {
+		return err
+	}
+	if len(strs) > 0 {
+		return m.Del(strs...).Err()
+	}
+	return nil
+}
+
+{{end}}
+

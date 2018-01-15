@@ -1,0 +1,277 @@
+{{define "object.redis.read"}}
+{{$obj := .}}
+{{$primary := $obj.PrimaryKey}}
+{{$primaryField := $primary.FirstField }}
+
+//! redis model read
+func (m *_{{$obj.Name}}RedisMgr) FindOne(unique Unique) (PrimaryKey, error) {
+	if relation := unique.UKRelation(m.RedisStore); relation != nil {
+		str, err := relation.FindOne(unique.Key())
+		if err != nil {
+			return nil, err
+		}
+
+		pk := {{$obj.Name}}Mgr.NewPrimaryKey()
+		if err := pk.Parse(str); err != nil {
+			return nil , err
+		}
+		return pk, nil
+	}
+	return nil, fmt.Errorf("unique none relation.")
+}
+
+func (m *_{{$obj.Name}}RedisMgr) FindOneFetch(unique Unique) (*{{$obj.Name}}, error) {
+	v, err := m.FindOne(unique)
+	if err != nil {
+		return nil, err
+	}
+	return m.Fetch(v)
+}
+
+func (m *_{{$obj.Name}}RedisMgr) Find(index Index) (int64, []PrimaryKey, error) {
+	if relation := index.IDXRelation(m.RedisStore); relation != nil {
+		strs, err := relation.Find(index.Key())
+		if err != nil {
+			return 0, nil, err
+		}
+		total := int64(len(strs))
+		p1, p2 := index.PositionOffsetLimit(len(strs))
+		strs = strs[p1:p2]
+
+		results := make([]PrimaryKey, 0, len(strs))
+		for _, str := range strs {
+			pk := {{$obj.Name}}Mgr.NewPrimaryKey()
+			if err := pk.Parse(str); err != nil {
+				total--
+				continue
+			}
+			results = append(results, pk)
+		}
+		return total, results, nil
+	}
+	return 0, nil, fmt.Errorf("index none relation.")
+}
+
+func (m *_{{$obj.Name}}RedisMgr) FindFetch(index Index) (int64, []*{{$obj.Name}}, error) {
+	total, vs, err := m.Find(index)
+	if err != nil {
+		return 0, nil, err
+	}
+	objs, err := m.FetchByPrimaryKeys(vs)
+	return total, objs, err
+}
+
+func (m *_{{$obj.Name}}RedisMgr) Range(scope Range) (int64, []PrimaryKey, error) {
+	if relation := scope.RNGRelation(m.RedisStore); relation != nil {
+		strs, err := relation.Range(scope.Key(), scope.Begin(), scope.End())
+		if err != nil {
+			return 0, nil, err
+		}
+		total := int64(len(strs))
+		p1, p2 := scope.PositionOffsetLimit(len(strs))
+		strs = strs[p1:p2]
+
+		results := make([]PrimaryKey, 0, len(strs))
+		for _, str := range strs {
+			pk := {{$obj.Name}}Mgr.NewPrimaryKey()
+			if err := pk.Parse(str); err != nil {
+				total--
+				continue
+			}
+			results = append(results, pk)
+		}
+		return total, results, nil
+	}
+	return 0, nil, fmt.Errorf("range none relation.")
+}
+
+func (m *_{{$obj.Name}}RedisMgr) RangeFetch(scope Range) (int64, []*{{$obj.Name}}, error) {
+	total, vs, err := m.Range(scope)
+	if err != nil {
+		return 0, nil, err
+	}
+	objs, err := m.FetchByPrimaryKeys(vs)
+	return total, objs, err
+}
+
+func (m *_{{$obj.Name}}RedisMgr) RangeRevert(scope Range) (int64, []PrimaryKey, error) {
+	if relation := scope.RNGRelation(m.RedisStore); relation != nil {
+		scope.Revert(true)
+		strs, err := relation.RangeRevert(scope.Key(), scope.Begin(), scope.End())
+		if err != nil {
+			return 0, nil, err
+		}
+
+		total := int64(len(strs))
+		p1, p2 := scope.PositionOffsetLimit(len(strs))
+		strs = strs[p1:p2]
+
+		results := make([]PrimaryKey, 0, len(strs))
+		for _, str := range strs {
+			pk := {{$obj.Name}}Mgr.NewPrimaryKey()
+			if err := pk.Parse(str); err != nil {
+				total--
+				continue
+			}
+			results = append(results, pk)
+		}
+		return total, results, nil
+	}
+	return 0, nil, fmt.Errorf("revert range none relation.")
+}
+
+func (m *_{{$obj.Name}}RedisMgr) RangeRevertFetch(scope Range) (int64, []*{{$obj.Name}}, error) {
+	total, vs, err := m.RangeRevert(scope)
+	if err != nil {
+		return 0, nil, err
+	}
+	objs, err := m.FetchByPrimaryKeys(vs)
+	return total, objs, err
+}
+
+func (m *_{{$obj.Name}}RedisMgr) Fetch(pk PrimaryKey) (*{{$obj.Name}}, error) {
+	obj := {{$obj.Name}}Mgr.New{{$obj.Name}}()
+	
+	pipe := m.BeginPipeline()
+	pipe.Exists(keyOfObject(obj, pk.Key()))
+	pipe.HMGet(keyOfObject(obj, pk.Key()),
+	{{- range $i, $field := $obj.Fields}}	
+	"{{$field.Name}}",
+	{{- end -}})
+	cmds, err := pipe.Exec()
+	if err != nil {
+		return nil, err
+	}
+
+	if b, err := cmds[0].(*redis.BoolCmd).Result(); err == nil {
+		if !b {
+			return nil, fmt.Errorf("{{$obj.Name}} primary key:(%s) not exist", pk.Key())
+		}
+	}
+
+	strs, err := cmds[1].(*redis.SliceCmd).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	{{- range $i, $field := $obj.Fields}}		
+		{{- if $field.IsNeedTransform}}
+			{{- if $field.IsNullable }}
+				if strs[{{$i}}].(string) == "nil" {
+					obj.{{$field.Name}} = nil	
+				} else {
+					var val{{$i}} {{$field.GetTransform.TypeOrigin}}
+					if err := orm.StringScan(strs[{{$i}}].(string), &val{{$i}}); err != nil {
+						return nil, err
+					}
+					{{$field.Name}}Value := {{- printf $field.GetTransform.ConvertTo (printf "val%d" $i)}}
+					obj.{{$field.Name}} = &{{$field.Name}}Value 
+				}				
+			{{- else}}
+				var val{{$i}} {{$field.GetTransform.TypeOrigin}}
+				if err := orm.StringScan(strs[{{$i}}].(string), &val{{$i}}); err != nil {
+					return nil, err
+				}
+				obj.{{$field.Name}} = {{- printf $field.GetTransform.ConvertTo (printf "val%d" $i)}}
+			{{- end}}
+		{{- else}}
+			if err := orm.StringScan(strs[{{$i}}].(string), &obj.{{$field.Name}}); err != nil {
+				return nil, err
+			}
+		{{- end}}
+		{{- if $field.IsEncode}}
+			obj.{{$field.Name}} = orm.Decode(obj.{{$field.Name}})
+		{{- end}}
+	{{- end}}
+	return obj, nil
+}
+
+func (m *_{{$obj.Name}}RedisMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*{{$obj.Name}}, error) {
+	objs := make([]*{{$obj.Name}}, 0, len(pks))
+	pipe := m.BeginPipeline()
+	obj := {{$obj.Name}}Mgr.New{{$obj.Name}}()
+	for _, pk := range pks {		
+		pipe.Exists(keyOfObject(obj, pk.Key()))
+		pipe.HMGet(keyOfObject(obj, pk.Key()),
+		{{- range $i, $field := $obj.Fields}}	
+		"{{$field.Name}}",
+		{{- end -}})
+	}
+	cmds, err := pipe.Exec()
+	if err != nil {
+		return nil, err
+	}
+	errall := []string{}
+	sv := ""
+	ok := true
+	for i := 0; i < len(pks); i++ {
+		if b, err := cmds[2*i].(*redis.BoolCmd).Result(); err == nil {
+			if !b {
+			    errall = append(errall, fmt.Sprintf("{{$obj.Name}} primary key:(%s) not exist", pks[i].Key()))
+                continue
+			}
+		}
+
+		strs, err := cmds[2*i+1].(*redis.SliceCmd).Result()
+		if err != nil {
+		    errall = append(errall, fmt.Sprintf("key:%v,err:%v", pks[i].Key(), err.Error()))
+			continue
+		}
+
+		obj := {{$obj.Name}}Mgr.New{{$obj.Name}}()
+		{{- range $i, $field := $obj.Fields}}		
+			{{- if $field.IsNeedTransform}}
+				{{- if $field.IsNullable }}
+					if strs[{{$i}}].(string) == "nil" {
+						obj.{{$field.Name}} = nil	
+					} else {
+						var val{{$i}} {{$field.GetTransform.TypeOrigin}}
+						sv, ok = strs[{{$i}}].(string)
+						if !ok {
+						    errall = append(errall, fmt.Sprintf("convert %v to string error", strs[{{$i}}]))
+						    continue
+						}
+						if err := orm.StringScan(sv, &val{{$i}}); err != nil {
+	                        errall = append(errall, fmt.Sprintf("key:%v,err:%v", pks[i].Key(), err.Error()))
+							continue
+						}
+						{{$field.Name}}Value := {{- printf $field.GetTransform.ConvertTo (printf "val%d" $i)}}
+						obj.{{$field.Name}} = &{{$field.Name}}Value 
+					}				
+				{{- else}}
+					var val{{$i}} {{$field.GetTransform.TypeOrigin}}
+					sv, ok = strs[{{$i}}].(string)
+					if !ok {
+					    errall = append(errall, fmt.Sprintf("convert %v to string error", strs[{{$i}}]))
+					    continue
+					}
+					if err := orm.StringScan(sv, &val{{$i}}); err != nil {
+						errall = append(errall, fmt.Sprintf("key:%v,err:%v", pks[i].Key(), err.Error()))
+					    continue
+					}
+					obj.{{$field.Name}} = {{- printf $field.GetTransform.ConvertTo (printf "val%d" $i)}}
+				{{- end}}				
+			{{- else}}
+			    sv, ok = strs[{{$i}}].(string)
+            	if !ok {
+            	    errall = append(errall, fmt.Sprintf("convert %v to string error", strs[{{$i}}]))
+            	    continue
+            	}
+				if err := orm.StringScan(sv, &obj.{{$field.Name}}); err != nil {
+				    errall = append(errall, fmt.Sprintf("key:%v,err:%v", pks[i].Key(), err.Error()))
+					continue
+				}
+			{{- end}}
+			{{- if $field.IsEncode}}
+				obj.{{$field.Name}} = orm.Decode(obj.{{$field.Name}})
+			{{- end}}
+		{{- end}}
+		objs = append(objs, obj)
+	}
+	if len(errall) > 0 {
+	    return objs, errors.New(strings.Join(errall, ERROR_SPLIT))
+	}
+	return objs, nil
+}
+
+{{end}}

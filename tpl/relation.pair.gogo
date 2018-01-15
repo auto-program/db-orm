@@ -1,0 +1,57 @@
+{{define "relation.pair"}}
+{{$relation := .}}
+{{$primaryField := $relation.PrimaryField}}
+//! redis relation pair
+func (m *_{{$relation.Name}}RedisMgr) PairAdd(obj *{{$relation.Name}}) error {
+	return m.Set(pairOfClass("{{$relation.Obj.Name}}", obj.GetClassName(), obj.Key), obj.Value, 0).Err()
+}
+
+func (pipe *_{{$relation.Name}}RedisPipeline) PairAdd(obj *{{$relation.Name}}) error {
+	return pipe.Set(pairOfClass("{{$relation.Obj.Name}}", obj.GetClassName(), obj.Key), obj.Value, 0).Err()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) PairGet(key string) (*{{$relation.Name}}, error) {
+	str, err := m.Get(pairOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key)).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	obj := m.New{{$relation.Name}}(key)
+	{{- if $relation.ValueField.IsNeedTransform}}
+		var val {{$relation.ValueField.GetTransform.TypeOrigin}}
+		if err := orm.StringScan(str, &val); err != nil {
+			return nil, err
+		}
+		obj.{{$relation.ValueField.Name}} = {{- printf $relation.ValueField.GetTransform.ConvertTo "val"}}
+	{{- else}}
+		if err := orm.StringScan(str, &obj.Value); err != nil {
+			return nil, err
+		}
+	{{- end}}
+	return obj, nil
+}
+
+func (m *_{{$relation.Name}}RedisMgr) PairRem(key string) error {
+	return m.Del(pairOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key)).Err()
+}
+
+func (pipe *_{{$relation.Name}}RedisPipeline) PairRem(key string) error {
+	return pipe.Del(pairOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key)).Err()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) FindOne(key string) (string, error) {
+	return m.Get(pairOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", key)).Result()
+}
+
+func (m *_{{$relation.Name}}RedisMgr) Clear() error {
+	strs, err := m.Keys(pairOfClass("{{$relation.Obj.Name}}", "{{$relation.Name}}", "*")).Result()
+	if err != nil {
+		return err
+	}
+	if len(strs) > 0 {
+		return m.Del(strs...).Err()
+	}
+	return nil
+}
+
+{{end}}

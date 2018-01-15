@@ -1,0 +1,24 @@
+{{define "relation.functions"}}
+{{$relation := .}}
+
+func (relation *{{.Name}}) GetClassName() string {
+	return "{{.Name}}"
+}
+
+func (relation *{{.Name}}) GetIndexes() []string {
+	idx := []string{
+	{{- range $field := $relation.Fields}}
+	{{- if $field.HasIndex}}
+		"{{$field.Name}}",
+	{{- end}}
+	{{- end}}
+	}
+	return idx
+}
+
+func (relation *{{.Name}}) GetStoreType() string {
+	return "{{$relation.StoreType}}"
+}
+
+{{end}}
+

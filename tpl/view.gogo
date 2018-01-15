@@ -1,0 +1,4 @@
+{{define "view"}}
+{{template "object" .}}
+{{end}}
+

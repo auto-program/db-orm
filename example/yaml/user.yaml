@@ -1,0 +1,69 @@
+User:
+  dbs: [redis, mysql]
+  dbname: ezorm
+  dbtable: users
+  comment: 用户表
+  fields:
+    - Id: int32
+      flags: [primary, autoinc]
+    - Name: string
+      validator: required
+    - Mailbox: string
+      comment: 邮箱
+      validator: required
+    - Sex: bool
+      flags: [index]
+    - Age: int32
+      flags: [range, order]
+    - Longitude: float64
+    - Latitude: float64
+    - Description: string
+      flags: [nullable]
+    - Password: string
+    - HeadUrl: string
+      flags: [nullable, encode]
+    - Status: int32
+    - CreatedAt: timeint
+    - UpdatedAt: timeint
+    - DeletedAt: timeint
+      flags: [nullable]
+  uniques: [[Mailbox, Password]]
+
+UserBaseInfo:
+  dbs: [mysql]
+  dbname: ezorm
+  dbview: user_base_info
+  fields:
+    - Id: int32
+      flags: [primary]
+    - Name: string
+      flags: [index]
+      size: 20
+    - Mailbox: string
+    - Password: string
+    - Sex: bool
+  uniques: [[Mailbox, Password]]
+  importSQL: "SELECT `id`,`name`,`mailbox`,`sex` FROM users"
+
+UserLocation:
+  dbs: [redis, mysql]
+  relation:
+    storetype: geo
+    valuetype: int32
+    modeltype: User
+  importSQL: "SELECT 'all',`longitude`,`latitude`,`id` FROM users"
+
+SexUserLocation:
+  dbs: [redis, mysql]
+  relation:
+    storetype: geo
+    valuetype: int32
+    modeltype: User
+  importSQL: "SELECT `sex`,`longitude`,`latitude`,`id` FROM users"
+
+UserId:
+  dbs: [redis, mysql]
+  relation:
+    storetype: list
+    valuetype: int32
+    modeltype: User
