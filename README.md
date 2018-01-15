@@ -1,6 +1,6 @@
-# redis-orm
+# db-orm
 
-redis-orm fly orm up 
+db-orm fly orm up 
 
 ## features
 
@@ -11,7 +11,7 @@ redis-orm fly orm up
 ````
 $: go get github.com/auto-program/db-orm
 
-$: redis-orm code -i example/yaml -o example/model
+$: db-orm code -i example/yaml -o example/model
 
 ````
 
@@ -55,7 +55,7 @@ model.UserRedisMgr(redis).FetchByPrimaryKeys(pks []PrimaryKey) ([]*User, error)
 ### write access usage
 
 ````
-import "github.com/ezbuy/redis-orm/example/model"
+import "github.com/auto-program/db-orm/example/model"
 
 # mysql
 model.MySQLSetup(cf)
@@ -91,7 +91,7 @@ model.UserRedisMgr(redis).Delete(obj)
 ### sync data
 
 ````
-import "github.com/ezbuy/redis-orm/example/model"
+import "github.com/auto-program/db-orm/example/model"
 
 model.MySQLSetup(cf)
 model.RedisSetup(cf)
@@ -109,7 +109,7 @@ enviroment:
   
   mysql-server, redis-server, test client all in the same machine (mac air)
 
-*redis-orm.redis.bench*
+*db-orm.redis.bench*
   
     Ran 1000 samples:
     unique.runtime:
@@ -133,7 +133,7 @@ enviroment:
       Slowest Time: 0.004s
       Average Time: 0.002s ± 0.000s
 
-*redis-orm.mysql.bench*
+*db-orm.mysql.bench*
   
     Ran 1000 samples:
     unique.runtime:
