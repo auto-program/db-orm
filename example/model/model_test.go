@@ -23,7 +23,7 @@ var _ = Describe("manager", func() {
 		Password: "dborm_pass",
 		Database: "dborm",
 	})
-
+	
 	RedisSetUp(&RedisConfig{
 		Host:     "localhost",
 		Port:     6379,
