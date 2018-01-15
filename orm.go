@@ -1,1 +1,7 @@
-package orm
+package main
+
+import "log"
+
+func main(){
+	log.Println("hello orm!")
+}
