@@ -27,11 +27,7 @@ func GenerateCode() {
 		os.Exit(1)
 	}
 
-	sep, err := filepath.Abs(viper.GetString("sep"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	sep := viper.GetString("sep")
 
 	if packageName == "" {
 		_, packageName = path.Split(outputDir)

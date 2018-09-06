@@ -1,4 +1,5 @@
 
+USE `ezorm`;
 CREATE TABLE `blogs` (
 	`id` INT(11) NOT NULL DEFAULT '0',
 	`user_id` INT(11) NOT NULL DEFAULT '0',

@@ -1,4 +1,4 @@
 
-DROP VIEW IF EXISTS `user_base_info`;
+USE `ezorm`;
 CREATE VIEW `user_base_info` AS SELECT `id`,`name`,`mailbox`,`sex` FROM users;
 

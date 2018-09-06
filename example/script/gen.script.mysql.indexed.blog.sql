@@ -1,4 +1,5 @@
 
+USE `ezsearch`;
 CREATE TABLE `indexed_blog` (
 	`id` INT(11) NOT NULL DEFAULT '0',
 	`user_id` INT(11) NOT NULL DEFAULT '0',
