@@ -1,10 +1,10 @@
 {{- define "script.mysql"}}{{- $obj := . -}}
 {{- if ne $obj.DbName ""}}
-USE {{$obj.DbName}};
+USE `{{$obj.DbName}}`;
 {{- end}}
 
-{{- if ne $obj.DbTable ""}}
-CREATE TABLE IF NOT EXISTS `{{$obj.DbTable}}` (
+{{if ne $obj.DbTable ""}}
+CREATE TABLE `{{$obj.DbTable}}` (
 	{{- range $i, $field := $obj.Fields}}
 	{{$field.SQLColumn "mysql"}},
 	{{- end}}
@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS `{{$obj.DbTable}}` (
 
 {{- range $i, $index := $obj.Indexes}}
 {{- if not $index.HasPrimaryKey}}
-DROP INDEX  `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`;
 CREATE INDEX `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`(
 	{{- range $i, $f := $index.Fields -}}
 		{{- if eq (add $i 1) (len $index.Fields) -}}
@@ -41,7 +40,6 @@ CREATE INDEX `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`(
 
 {{- range $i, $index := $obj.Ranges}}
 {{- if not $index.HasPrimaryKey}}
-DROP INDEX  `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`;
 CREATE INDEX `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`(
 	{{- range $i, $f := $index.Fields -}}
 		{{- if eq (add $i 1) (len $index.Fields) -}}
@@ -56,8 +54,8 @@ CREATE INDEX `{{$index.Name | camel2name}}` ON `{{$obj.DbTable}}`(
 {{- end}}
 
 {{- if ne $obj.DbView ""}}
-DROP VIEW IF EXISTS `{{$obj.DbView}}`;
 CREATE VIEW `{{$obj.DbView}}` AS {{$obj.ImportSQL}};
 {{- end}}
 
 {{end}}
+ß
