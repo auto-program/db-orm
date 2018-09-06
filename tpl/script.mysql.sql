@@ -3,7 +3,7 @@
 USE `{{$obj.DbName}}`;
 {{- end}}
 
-{{if ne $obj.DbTable ""}}
+{{- if ne $obj.DbTable ""}}
 CREATE TABLE `{{$obj.DbTable}}` (
 	{{- range $i, $field := $obj.Fields}}
 	{{$field.SQLColumn "mysql"}},

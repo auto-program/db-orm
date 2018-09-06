@@ -41,7 +41,9 @@ func Execute() {
 
 func init() {
 	RootCmd.PersistentFlags().StringP("output", "o", ".", "directory of output")
+	RootCmd.PersistentFlags().StringP("sep", "s", ".", "seperator")
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose message flag")
 	viper.BindPFlag("output", RootCmd.PersistentFlags().Lookup("output"))
+	viper.BindPFlag("sep", RootCmd.PersistentFlags().Lookup("sep"))
 	viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose"))
 }

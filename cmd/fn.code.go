@@ -26,6 +26,13 @@ func GenerateCode() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	sep, err := filepath.Abs(viper.GetString("sep"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	if packageName == "" {
 		_, packageName = path.Split(outputDir)
 	}
@@ -76,11 +83,11 @@ func GenerateCode() {
 
 GeneratePoint:
 	for _, metaObj := range metaObjs {
-		fs.ExecuteMetaObjectCodeTemplate(outputDir, metaObj)
+		fs.ExecuteMetaObjectCodeTemplate(outputDir, sep, metaObj)
 	}
 
 	for conf := range confTpls {
-		fs.ExecuteConfigTemplate(outputDir, conf, packageName)
+		fs.ExecuteConfigTemplate(outputDir, conf, packageName, sep)
 	}
 
 }

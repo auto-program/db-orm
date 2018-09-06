@@ -37,9 +37,9 @@ func generate_templates(obj *parser.MetaObject) []string {
 	return tpls
 }
 
-func ExecuteMetaObjectCodeTemplate(output string, obj *parser.MetaObject) error {
+func ExecuteMetaObjectCodeTemplate(output string, sep string, obj *parser.MetaObject) error {
 	for _, tpl := range generate_templates(obj) {
-		filename := filepath.Join(output, strings.Join([]string{"gen", tpl, camel2sep(obj.Name, "."), "go"}, "."))
+		filename := filepath.Join(output, strings.Join([]string{"gen", tpl, camel2sep(obj.Name, sep), "go"}, sep))
 		fd, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
@@ -55,27 +55,27 @@ func ExecuteMetaObjectCodeTemplate(output string, obj *parser.MetaObject) error 
 	return nil
 }
 
-func ExecuteMetaObjectScriptTemplate(output string, driver string, obj *parser.MetaObject) error {
-	filename := filepath.Join(output, strings.Join([]string{"gen", "script", driver, camel2sep(obj.Name, "."), "sql"}, "."))
+func ExecuteMetaObjectScriptTemplate(output string, driver string, sep string, obj *parser.MetaObject) error {
+	filename := filepath.Join(output, strings.Join([]string{"gen", "script", driver, camel2sep(obj.Name, sep), "sql"}, sep))
 	fd, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
-	if err := RedisOrmTemplate.ExecuteTemplate(fd, strings.Join([]string{"script", driver}, "."), obj); err != nil {
+	if err := RedisOrmTemplate.ExecuteTemplate(fd, strings.Join([]string{"script", driver}, sep), obj); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ExecuteConfigTemplate(output, db string, packageName string) error {
-	filename := filepath.Join(output, strings.Join([]string{"gen", "conf", db, "go"}, "."))
+func ExecuteConfigTemplate(output, db string, packageName string, sep string) error {
+	filename := filepath.Join(output, strings.Join([]string{"gen", "conf", db, "go"}, sep))
 	fd, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
-	if err := RedisOrmTemplate.ExecuteTemplate(fd, strings.Join([]string{"conf", db}, "."), map[string]interface{}{
+	if err := RedisOrmTemplate.ExecuteTemplate(fd, strings.Join([]string{"conf", db}, sep), map[string]interface{}{
 		"GoPackage": packageName,
 	}); err != nil {
 		return err

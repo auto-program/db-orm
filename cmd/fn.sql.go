@@ -24,6 +24,12 @@ func GenerateSQL() {
 		os.Exit(1)
 	}
 
+	sep, err := filepath.Abs(viper.GetString("sep"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	model := viper.GetString("sql_model")
 	driver := viper.GetString("sql_driver")
 
@@ -73,7 +79,7 @@ func GenerateSQL() {
 GeneratePoint:
 	for _, metaObj := range metaObjs {
 		if metaObj.DbSource() != "" {
-			fs.ExecuteMetaObjectScriptTemplate(outputDir, driver, metaObj)
+			fs.ExecuteMetaObjectScriptTemplate(outputDir, driver, sep, metaObj)
 		}
 	}
 }
