@@ -1,6 +1,6 @@
 {{- define "script.mysql"}}{{- $obj := . -}}
 {{- if ne $obj.DbName ""}}
-USE $obj.DbName;
+USE {{$obj.DbName}};
 {{- end}}
 
 {{- if ne $obj.DbTable ""}}
