@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -16,12 +17,14 @@ type DB interface {
 	Query(sql string, args ...interface{}) (*sql.Rows, error)
 	Exec(sql string, args ...interface{}) (sql.Result, error)
 	SetError(err error)
+	SetContext(ctx context.Context)
 }
 
 type DBStore struct {
 	*sql.DB
 	debug   bool
 	slowlog time.Duration
+	ctx     context.Context
 }
 
 func NewDBStore(driver, host string, port int, database, username, password string) (*DBStore, error) {
@@ -44,7 +47,7 @@ func NewDBStore(driver, host string, port int, database, username, password stri
 	if err != nil {
 		return nil, err
 	}
-	return &DBStore{db, false, time.Duration(0)}, nil
+	return &DBStore{db, false, time.Duration(0), nil}, nil
 }
 
 func NewDBStoreCharset(driver, host string, port int, database, username, password, charset string) (*DBStore, error) {
@@ -71,7 +74,7 @@ func NewDBStoreCharset(driver, host string, port int, database, username, passwo
 	if err != nil {
 		return nil, err
 	}
-	return &DBStore{db, false, time.Duration(0)}, nil
+	return &DBStore{db, false, time.Duration(0), nil}, nil
 }
 
 func (store *DBStore) Debug(b bool) {
@@ -95,6 +98,9 @@ func (store *DBStore) Query(sql string, args ...interface{}) (*sql.Rows, error) 
 	if store.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
+	if store.ctx != nil {
+		return store.DB.QueryContext(store.ctx, sql, args...)
+	}
 	return store.DB.Query(sql, args...)
 }
 
@@ -111,10 +117,17 @@ func (store *DBStore) Exec(sql string, args ...interface{}) (sql.Result, error) 
 	if store.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
+	if store.ctx != nil {
+		return store.DB.ExecContext(store.ctx, sql, args...)
+	}
 	return store.DB.Exec(sql, args...)
 }
 
 func (store *DBStore) SetError(err error) {}
+
+func (store *DBStore) SetContext(ctx context.Context) {
+	store.ctx = ctx
+}
 
 func (store *DBStore) Close() error {
 	if err := store.DB.Close(); err != nil {
@@ -130,6 +143,7 @@ type DBTx struct {
 	slowlog      time.Duration
 	err          error
 	rowsAffected int64
+	ctx          context.Context
 }
 
 func (store *DBStore) BeginTx() (*DBTx, error) {
@@ -142,6 +156,7 @@ func (store *DBStore) BeginTx() (*DBTx, error) {
 		tx:      tx,
 		debug:   store.debug,
 		slowlog: store.slowlog,
+		ctx:     store.ctx,
 	}, nil
 }
 
@@ -152,7 +167,7 @@ func (tx *DBTx) Close() error {
 	return tx.tx.Commit()
 }
 
-func (tx *DBTx) Query(sql string, args ...interface{}) (*sql.Rows, error) {
+func (tx *DBTx) Query(sql string, args ...interface{}) (result *sql.Rows, err error) {
 	t1 := time.Now()
 	if tx.slowlog > 0 {
 		defer func(t time.Time) {
@@ -165,12 +180,18 @@ func (tx *DBTx) Query(sql string, args ...interface{}) (*sql.Rows, error) {
 	if tx.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
-	result, err := tx.tx.Query(sql, args...)
+
+	if tx.ctx != nil {
+		result, err = tx.tx.QueryContext(tx.ctx, sql, args...)
+		tx.err = err
+		return
+	}
+	result, err = tx.tx.Query(sql, args...)
 	tx.err = err
 	return result, tx.err
 }
 
-func (tx *DBTx) Exec(sql string, args ...interface{}) (sql.Result, error) {
+func (tx *DBTx) Exec(sql string, args ...interface{}) (result sql.Result, err error) {
 	t1 := time.Now()
 	if tx.slowlog > 0 {
 		defer func(t time.Time) {
@@ -183,11 +204,20 @@ func (tx *DBTx) Exec(sql string, args ...interface{}) (sql.Result, error) {
 	if tx.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
-	result, err := tx.tx.Exec(sql, args...)
+	if tx.ctx != nil {
+		result, err = tx.tx.ExecContext(tx.ctx, sql, args...)
+		tx.err = err
+		return
+	}
+	result, err = tx.tx.Exec(sql, args...)
 	tx.err = err
-	return result, tx.err
+	return
 }
 
 func (tx *DBTx) SetError(err error) {
 	tx.err = err
+}
+
+func (tx *DBTx) SetContext(ctx context.Context) {
+	tx.ctx = ctx
 }

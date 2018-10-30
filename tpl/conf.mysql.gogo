@@ -3,6 +3,7 @@
 import (
 	"sync"
 	"time"
+	"context"
 
 	"github.com/auto-program/db-orm/orm"
 )
@@ -27,7 +28,7 @@ func MySQLSetup(cf *MySQLConfig) {
 	_mysql_cfg = *cf
 }
 
-func MySQL() *orm.DBStore {
+func MySQL(ctx context.Context) *orm.DBStore {
 	var err error
 	_mysql_once.Do(func() {
 		_mysql_store, err = orm.NewDBStore("mysql",
@@ -46,6 +47,7 @@ func MySQL() *orm.DBStore {
 		_mysql_store.SetMaxIdleConns(_mysql_cfg.PoolSize)
 		_mysql_store.SetMaxOpenConns(_mysql_cfg.PoolSize)
 	})
+	_mysql_store.SetContext(ctx)
 	return _mysql_store
 }
 
