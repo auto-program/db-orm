@@ -161,6 +161,13 @@ func (store *DBStore) BeginTx() (*DBTx, error) {
 }
 
 func (tx *DBTx) Close() error {
+	if tx.ctx != nil {
+		select {
+		case <-tx.ctx.Done():
+			tx.err = tx.ctx.Err()
+		default:
+		}
+	}
 	if tx.err != nil {
 		return tx.tx.Rollback()
 	}
