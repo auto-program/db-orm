@@ -155,8 +155,8 @@ func (m *_{{$obj.Name}}DBMgr) Fetch(pk PrimaryKey) (*{{$obj.Name}}, error) {
 	}
 	if len(objs) > 0 {
 		return objs[0].(*{{$obj.Name}}), nil
-	}
-	return nil, fmt.Errorf("{{$obj.Name}} fetch record not found")
+	} 
+	return nil, orm.NoRecord
 }
 
 func (m *_{{$obj.Name}}DBMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*{{$obj.Name}}, error) {
@@ -197,7 +197,7 @@ func (m *_{{$obj.Name}}DBMgr) FindOne(unique Unique) (PrimaryKey, error) {
 	if len(objs) > 0 {
 		return objs[0], nil
 	}
-	return nil, fmt.Errorf("{{$obj.Name}} find record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_{{$obj.Name}}DBMgr) FindOneFetch(unique Unique) (*{{$obj.Name}}, error) {
@@ -210,7 +210,7 @@ func (m *_{{$obj.Name}}DBMgr) FindOneFetch(unique Unique) (*{{$obj.Name}}, error
 	if len(objs) > 0 {
 		return objs[0].(*{{$obj.Name}}), nil
 	}
-	return nil, fmt.Errorf("none record")
+	return nil, orm.NoRecord
 }
 
 func (m *_{{$obj.Name}}DBMgr) Find(index Index) (int64, []PrimaryKey, error) {
