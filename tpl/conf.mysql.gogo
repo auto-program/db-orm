@@ -28,7 +28,7 @@ func MySQLSetup(cf *MySQLConfig) {
 	_mysql_cfg = *cf
 }
 
-func MySQL(ctx context.Context) *orm.DBStore {
+func MySQL() *orm.DBStore {
 	var err error
 	_mysql_once.Do(func() {
 		_mysql_store, err = orm.NewDBStore("mysql",
@@ -47,7 +47,6 @@ func MySQL(ctx context.Context) *orm.DBStore {
 		_mysql_store.SetMaxIdleConns(_mysql_cfg.PoolSize)
 		_mysql_store.SetMaxOpenConns(_mysql_cfg.PoolSize)
 	})
-	_mysql_store.SetContext(ctx)
 	return _mysql_store
 }
 

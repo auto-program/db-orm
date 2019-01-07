@@ -17,14 +17,12 @@ type DB interface {
 	Query(sql string, args ...interface{}) (*sql.Rows, error)
 	Exec(sql string, args ...interface{}) (sql.Result, error)
 	SetError(err error)
-	SetContext(ctx context.Context)
 }
 
 type DBStore struct {
 	*sql.DB
 	debug   bool
 	slowlog time.Duration
-	ctx     context.Context
 }
 
 func NewDBStore(driver, host string, port int, database, username, password string) (*DBStore, error) {
@@ -47,7 +45,7 @@ func NewDBStore(driver, host string, port int, database, username, password stri
 	if err != nil {
 		return nil, err
 	}
-	return &DBStore{db, false, time.Duration(0), nil}, nil
+	return &DBStore{db, false, time.Duration(0)}, nil
 }
 
 func NewDBStoreCharset(driver, host string, port int, database, username, password, charset string) (*DBStore, error) {
@@ -74,7 +72,7 @@ func NewDBStoreCharset(driver, host string, port int, database, username, passwo
 	if err != nil {
 		return nil, err
 	}
-	return &DBStore{db, false, time.Duration(0), nil}, nil
+	return &DBStore{db, false, time.Duration(0)}, nil
 }
 
 func (store *DBStore) Debug(b bool) {
@@ -98,9 +96,6 @@ func (store *DBStore) Query(sql string, args ...interface{}) (*sql.Rows, error) 
 	if store.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
-	if store.ctx != nil {
-		return store.DB.QueryContext(store.ctx, sql, args...)
-	}
 	return store.DB.Query(sql, args...)
 }
 
@@ -117,17 +112,10 @@ func (store *DBStore) Exec(sql string, args ...interface{}) (sql.Result, error) 
 	if store.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
-	if store.ctx != nil {
-		return store.DB.ExecContext(store.ctx, sql, args...)
-	}
 	return store.DB.Exec(sql, args...)
 }
 
 func (store *DBStore) SetError(err error) {}
-
-func (store *DBStore) SetContext(ctx context.Context) {
-	store.ctx = ctx
-}
 
 func (store *DBStore) Close() error {
 	if err := store.DB.Close(); err != nil {
@@ -146,7 +134,7 @@ type DBTx struct {
 	ctx          context.Context
 }
 
-func (store *DBStore) BeginTx() (*DBTx, error) {
+func (store *DBStore) BeginTx(ctx context.Context) (*DBTx, error) {
 	tx, err := store.Begin()
 	if err != nil {
 		return nil, err
@@ -156,7 +144,7 @@ func (store *DBStore) BeginTx() (*DBTx, error) {
 		tx:      tx,
 		debug:   store.debug,
 		slowlog: store.slowlog,
-		ctx:     store.ctx,
+		ctx:     ctx,
 	}, nil
 }
 
