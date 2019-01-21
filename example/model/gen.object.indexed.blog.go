@@ -284,13 +284,19 @@ func (u *IdOfIndexedBlogRNG) RNGRelation(store *orm.RedisStore) RangeRelation {
 
 //! orm.elastic
 var IndexedBlogElasticFields = struct {
+	UserId    string
+	Hash      string
 	Title     string
 	Content   string
+	Readed    string
 	CreatedAt string
 	UpdatedAt string
 }{
+	"user_id",
+	"hash",
 	"title",
 	"content",
+	"readed",
 	"created_at",
 	"updated_at",
 }
@@ -304,6 +310,13 @@ type _IndexedBlogElasticMgr struct {
 func (m *_IndexedBlogElasticMgr) Mapping() map[string]interface{} {
 	return map[string]interface{}{
 		"properties": map[string]interface{}{
+			"user_id": map[string]interface{}{
+				"type": "integer",
+			},
+			"hash": map[string]interface{}{
+				"type":  "string",
+				"index": "not_analyzed",
+			},
 			"title": map[string]interface{}{
 				"type":  "string",
 				"index": "analyzed",
@@ -312,6 +325,9 @@ func (m *_IndexedBlogElasticMgr) Mapping() map[string]interface{} {
 				"type":     "string",
 				"index":    "analyzed",
 				"analyzer": "standard",
+			},
+			"readed": map[string]interface{}{
+				"type": "integer",
 			},
 			"created_at": map[string]interface{}{
 				"type":   "date",

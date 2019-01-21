@@ -16,7 +16,18 @@ func {{$obj.Name}}DBMgr(db orm.DB) *_{{$obj.Name}}DBMgr {
 	}
 	return &_{{$obj.Name}}DBMgr{db: db}
 }
-
+func (m *_{{$obj.Name}}DBMgr)encode(s string) string  {
+	if _cipher == nil {
+		return orm.Encode(s)
+	}
+	return _cipher.Encode(s)
+}
+func (m *_{{$obj.Name}}DBMgr)decode(s string) string  {
+	if _cipher == nil {
+		return orm.Decode(s)
+	}
+	return _cipher.Decode(s)
+}
 func (m *_{{$obj.Name}}DBMgr) Search(where string, orderby string, limit string, args ...interface{}) ([]*{{$obj.Name}}, error) {
 	obj := {{$obj.Name}}Mgr.New{{$obj.Name}}()
 	conditions := []string{where, orderby, limit}
@@ -125,7 +136,7 @@ func (m *_{{$obj.Name}}DBMgr) FetchBySQL(q string, args ... interface{}) (result
 				{{- end -}}
 			{{- end}}
 			{{- if $field.IsEncode}}
-			result.{{$field.Name}} = orm.Decode(result.{{$field.Name}})
+			result.{{$field.Name}} = m.decode(result.{{$field.Name}})
 			{{- end}}
 		{{end}}
 		results = append(results, &result)
@@ -343,7 +354,7 @@ func (m *_{{$obj.Name}}DBMgr) queryLimit(where string, limit int, args ...interf
 				{{- end -}}
 			{{- end}}
 			{{- if $field.IsEncode}}
-			result.{{$field.Name}} = orm.Decode(result.{{$field.Name}})
+			result.{{$field.Name}} = m.decode(result.{{$field.Name}})
 			{{- end}}
 		{{end}}
 		results = append(results, result)

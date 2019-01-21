@@ -395,7 +395,18 @@ func BlogDBMgr(db orm.DB) *_BlogDBMgr {
 	}
 	return &_BlogDBMgr{db: db}
 }
-
+func (m *_BlogDBMgr) encode(s string) string {
+	if _cipher == nil {
+		return orm.Encode(s)
+	}
+	return _cipher.Encode(s)
+}
+func (m *_BlogDBMgr) decode(s string) string {
+	if _cipher == nil {
+		return orm.Decode(s)
+	}
+	return _cipher.Decode(s)
+}
 func (m *_BlogDBMgr) Search(where string, orderby string, limit string, args ...interface{}) ([]*Blog, error) {
 	obj := BlogMgr.NewBlog()
 	conditions := []string{where, orderby, limit}
@@ -485,7 +496,7 @@ func (m *_BlogDBMgr) Fetch(pk PrimaryKey) (*Blog, error) {
 	if len(objs) > 0 {
 		return objs[0].(*Blog), nil
 	}
-	return nil, fmt.Errorf("Blog fetch record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_BlogDBMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*Blog, error) {
@@ -508,7 +519,7 @@ func (m *_BlogDBMgr) FindOne(unique Unique) (PrimaryKey, error) {
 	if len(objs) > 0 {
 		return objs[0], nil
 	}
-	return nil, fmt.Errorf("Blog find record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_BlogDBMgr) FindOneFetch(unique Unique) (*Blog, error) {
@@ -521,7 +532,7 @@ func (m *_BlogDBMgr) FindOneFetch(unique Unique) (*Blog, error) {
 	if len(objs) > 0 {
 		return objs[0].(*Blog), nil
 	}
-	return nil, fmt.Errorf("none record")
+	return nil, orm.NoRecord
 }
 
 func (m *_BlogDBMgr) Find(index Index) (int64, []PrimaryKey, error) {

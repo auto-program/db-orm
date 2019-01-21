@@ -590,7 +590,18 @@ func UserDBMgr(db orm.DB) *_UserDBMgr {
 	}
 	return &_UserDBMgr{db: db}
 }
-
+func (m *_UserDBMgr) encode(s string) string {
+	if _cipher == nil {
+		return orm.Encode(s)
+	}
+	return _cipher.Encode(s)
+}
+func (m *_UserDBMgr) decode(s string) string {
+	if _cipher == nil {
+		return orm.Decode(s)
+	}
+	return _cipher.Decode(s)
+}
 func (m *_UserDBMgr) Search(where string, orderby string, limit string, args ...interface{}) ([]*User, error) {
 	obj := UserMgr.NewUser()
 	conditions := []string{where, orderby, limit}
@@ -657,7 +668,7 @@ func (m *_UserDBMgr) FetchBySQL(q string, args ...interface{}) (results []interf
 		result.Description = Description.String
 
 		result.HeadUrl = HeadUrl.String
-		result.HeadUrl = orm.Decode(result.HeadUrl)
+		result.HeadUrl = m.decode(result.HeadUrl)
 
 		result.CreatedAt = time.Unix(CreatedAt, 0)
 		result.UpdatedAt = time.Unix(UpdatedAt, 0)
@@ -695,7 +706,7 @@ func (m *_UserDBMgr) Fetch(pk PrimaryKey) (*User, error) {
 	if len(objs) > 0 {
 		return objs[0].(*User), nil
 	}
-	return nil, fmt.Errorf("User fetch record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserDBMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*User, error) {
@@ -724,7 +735,7 @@ func (m *_UserDBMgr) FindOne(unique Unique) (PrimaryKey, error) {
 	if len(objs) > 0 {
 		return objs[0], nil
 	}
-	return nil, fmt.Errorf("User find record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserDBMgr) FindOneFetch(unique Unique) (*User, error) {
@@ -737,7 +748,7 @@ func (m *_UserDBMgr) FindOneFetch(unique Unique) (*User, error) {
 	if len(objs) > 0 {
 		return objs[0].(*User), nil
 	}
-	return nil, fmt.Errorf("none record")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserDBMgr) Find(index Index) (int64, []PrimaryKey, error) {
@@ -874,7 +885,7 @@ func (m *_UserDBMgr) BatchCreate(objs []*User) (int64, error) {
 		values = append(values, obj.Latitude)
 		values = append(values, obj.Description)
 		values = append(values, obj.Password)
-		values = append(values, orm.Encode(obj.HeadUrl))
+		values = append(values, m.encode(obj.HeadUrl))
 		values = append(values, obj.Status)
 		values = append(values, obj.CreatedAt.Unix())
 		values = append(values, obj.UpdatedAt.Unix())
@@ -923,7 +934,7 @@ func (m *_UserDBMgr) Create(obj *User) (int64, error) {
 	values = append(values, obj.Latitude)
 	values = append(values, obj.Description)
 	values = append(values, obj.Password)
-	values = append(values, orm.Encode(obj.HeadUrl))
+	values = append(values, m.encode(obj.HeadUrl))
 	values = append(values, obj.Status)
 	values = append(values, obj.CreatedAt.Unix())
 	values = append(values, obj.UpdatedAt.Unix())
@@ -972,7 +983,7 @@ func (m *_UserDBMgr) Update(obj *User) (int64, error) {
 	values = append(values, obj.Latitude)
 	values = append(values, obj.Description)
 	values = append(values, obj.Password)
-	values = append(values, orm.Encode(obj.HeadUrl))
+	values = append(values, m.encode(obj.HeadUrl))
 	values = append(values, obj.Status)
 	values = append(values, obj.CreatedAt.Unix())
 	values = append(values, obj.UpdatedAt.Unix())

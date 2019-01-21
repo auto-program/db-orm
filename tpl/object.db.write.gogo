@@ -21,7 +21,7 @@ func (m *_{{$obj.Name}}DBMgr) BatchCreate(objs []*{{$obj.Name}}) (int64, error) 
 						values = append(values, {{$field.GetTransformValue "obj."}})
 					}
 				{{- else if $field.IsEncode}}
-					values = append(values, orm.Encode({{$field.GetTransformValue "obj."}}))
+					values = append(values, m.encode({{$field.GetTransformValue "obj."}}))
 				{{- else }}
 					values = append(values, {{$field.GetTransformValue "obj."}})
 				{{- end}}			
@@ -68,7 +68,7 @@ func (m *_{{$obj.Name}}DBMgr) Create(obj *{{$obj.Name}}) (int64, error) {
 					values = append(values, {{$field.GetTransformValue "obj."}})
 				}
 			{{- else if $field.IsEncode}}
-					values = append(values, orm.Encode({{$field.GetTransformValue "obj."}}))
+					values = append(values, m.encode({{$field.GetTransformValue "obj."}}))
 			{{- else }}
 				values = append(values, {{$field.GetTransformValue "obj."}})
 			{{- end}}
@@ -109,7 +109,7 @@ func (m *_{{$obj.Name}}DBMgr) Update(obj *{{$obj.Name}}) (int64, error) {
 						values = append(values, {{$field.GetTransformValue "obj."}})
 					}
 				{{- else if $field.IsEncode}}
-					values = append(values, orm.Encode({{$field.GetTransformValue "obj."}}))	
+					values = append(values, m.encode({{$field.GetTransformValue "obj."}}))
 				{{- else}}
 					values = append(values, {{$field.GetTransformValue "obj."}})
 				{{- end}}
