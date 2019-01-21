@@ -15,7 +15,7 @@ func (u *{{$index.Name}}) Key() string {
 		{{- range $j, $field := $index.Fields}}
 		"{{$field.Name}}",
 			{{- if $field.IsEncode}}
-			u.encode(fmt.Sprint(u.{{$field.Name}})),
+			orm.Encode(fmt.Sprint(u.{{$field.Name}})),
 			{{- else}}
 			fmt.Sprint(u.{{$field.Name}}),
 			{{- end}}		

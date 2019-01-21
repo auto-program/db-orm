@@ -304,18 +304,7 @@ func UserBlogsDBMgr(db orm.DB) *_UserBlogsDBMgr {
 	}
 	return &_UserBlogsDBMgr{db: db}
 }
-func (m *_UserBlogsDBMgr) encode(s string) string {
-	if _cipher == nil {
-		return orm.Encode(s)
-	}
-	return _cipher.Encode(s)
-}
-func (m *_UserBlogsDBMgr) decode(s string) string {
-	if _cipher == nil {
-		return orm.Decode(s)
-	}
-	return _cipher.Decode(s)
-}
+
 func (m *_UserBlogsDBMgr) Search(where string, orderby string, limit string, args ...interface{}) ([]*UserBlogs, error) {
 	obj := UserBlogsMgr.NewUserBlogs()
 	conditions := []string{where, orderby, limit}
@@ -399,7 +388,7 @@ func (m *_UserBlogsDBMgr) Fetch(pk PrimaryKey) (*UserBlogs, error) {
 	if len(objs) > 0 {
 		return objs[0].(*UserBlogs), nil
 	}
-	return nil, orm.NoRecord
+	return nil, fmt.Errorf("UserBlogs fetch record not found")
 }
 
 func (m *_UserBlogsDBMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*UserBlogs, error) {
@@ -422,7 +411,7 @@ func (m *_UserBlogsDBMgr) FindOne(unique Unique) (PrimaryKey, error) {
 	if len(objs) > 0 {
 		return objs[0], nil
 	}
-	return nil, orm.NoRecord
+	return nil, fmt.Errorf("UserBlogs find record not found")
 }
 
 func (m *_UserBlogsDBMgr) FindOneFetch(unique Unique) (*UserBlogs, error) {
@@ -435,7 +424,7 @@ func (m *_UserBlogsDBMgr) FindOneFetch(unique Unique) (*UserBlogs, error) {
 	if len(objs) > 0 {
 		return objs[0].(*UserBlogs), nil
 	}
-	return nil, orm.NoRecord
+	return nil, fmt.Errorf("none record")
 }
 
 func (m *_UserBlogsDBMgr) Find(index Index) (int64, []PrimaryKey, error) {

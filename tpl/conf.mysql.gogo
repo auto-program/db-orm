@@ -12,14 +12,6 @@ var (
 	_mysql_cfg   MySQLConfig
 	_mysql_once  sync.Once
 )
-var _cipher Cipher
-type Cipher interface {
-	Encode(string) string
-	Decode(string) string
-}
-func SetCipher(c Cipher)  {
-	_cipher = c
-}
 
 type MySQLConfig struct {
 	Host            string
