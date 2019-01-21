@@ -70,7 +70,7 @@ func (m *_{{$obj.Name}}DBMgr) FetchBySQL(q string, args ... interface{}) (result
 				{{- end -}}
 			{{- end}}
 			{{- if $field.IsEncode}}
-			result.{{$field.Name}} = m.decode(result.{{$field.Name}})
+			result.{{$field.Name}} = orm.Decode(result.{{$field.Name}})
 			{{- end}}
 		{{end}}
 
