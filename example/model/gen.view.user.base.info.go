@@ -402,7 +402,18 @@ func UserBaseInfoDBMgr(db orm.DB) *_UserBaseInfoDBMgr {
 	}
 	return &_UserBaseInfoDBMgr{db: db}
 }
-
+func (m *_UserBaseInfoDBMgr) encode(s string) string {
+	if _cipher == nil {
+		return orm.Encode(s)
+	}
+	return _cipher.Encode(s)
+}
+func (m *_UserBaseInfoDBMgr) decode(s string) string {
+	if _cipher == nil {
+		return orm.Decode(s)
+	}
+	return _cipher.Decode(s)
+}
 func (m *_UserBaseInfoDBMgr) Search(where string, orderby string, limit string, args ...interface{}) ([]*UserBaseInfo, error) {
 	obj := UserBaseInfoMgr.NewUserBaseInfo()
 	conditions := []string{where, orderby, limit}
@@ -486,7 +497,7 @@ func (m *_UserBaseInfoDBMgr) Fetch(pk PrimaryKey) (*UserBaseInfo, error) {
 	if len(objs) > 0 {
 		return objs[0].(*UserBaseInfo), nil
 	}
-	return nil, fmt.Errorf("UserBaseInfo fetch record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserBaseInfoDBMgr) FetchByPrimaryKeys(pks []PrimaryKey) ([]*UserBaseInfo, error) {
@@ -515,7 +526,7 @@ func (m *_UserBaseInfoDBMgr) FindOne(unique Unique) (PrimaryKey, error) {
 	if len(objs) > 0 {
 		return objs[0], nil
 	}
-	return nil, fmt.Errorf("UserBaseInfo find record not found")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserBaseInfoDBMgr) FindOneFetch(unique Unique) (*UserBaseInfo, error) {
@@ -528,7 +539,7 @@ func (m *_UserBaseInfoDBMgr) FindOneFetch(unique Unique) (*UserBaseInfo, error) 
 	if len(objs) > 0 {
 		return objs[0].(*UserBaseInfo), nil
 	}
-	return nil, fmt.Errorf("none record")
+	return nil, orm.NoRecord
 }
 
 func (m *_UserBaseInfoDBMgr) Find(index Index) (int64, []PrimaryKey, error) {
