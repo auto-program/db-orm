@@ -11,6 +11,16 @@ import (
 	"encoding/base64"
 	"reflect"
 )
+var _cipher Cipher
+
+type Cipher interface {
+	Encode(string) string
+	Decode(string) string
+}
+
+func SetCipher(c Cipher) {
+	_cipher = c
+}
 
 func indirect(a interface{}) interface{} {
 	if a == nil {
@@ -285,13 +295,21 @@ func StringScan(str string, v interface{}) error {
 }
 
 func Encode(src string) string {
-	return base64.StdEncoding.EncodeToString([]byte(src))
+	if _cipher == nil {
+		return base64.StdEncoding.EncodeToString([]byte(src))
+	}
+	return _cipher.Encode(src)
+
 }
 
 func Decode(src string) string {
-	decoded, err := base64.StdEncoding.DecodeString(src)
-	if err != nil {
-		panic(err)
+	if _cipher == nil {
+		decoded, err := base64.StdEncoding.DecodeString(src)
+		if err != nil {
+			panic(err)
+		}
+		return string(decoded)
 	}
-	return string(decoded)
+	return _cipher.Decode(src)
+
 }
