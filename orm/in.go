@@ -32,6 +32,13 @@ func (in *FieldIN) SQLFormat() string {
 	return fmt.Sprintf("%s IN (%s)", in.Field, strings.Join(in.holders, ","))
 }
 
+func (in *FieldIN) SQLFormatNotIn() string {
+	if len(in.Params) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%s NOT IN (%s)", in.Field, strings.Join(in.holders, ","))
+}
+
 func (in *FieldIN) SQLParams() []interface{} {
 	return in.Params
 }
