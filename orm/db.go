@@ -237,17 +237,7 @@ func (tx *DBTx) SetContext(ctx context.Context) {
 }
 
 func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
-	var span opentracing.Span
-	parent := opentracing.SpanFromContext(db.ctx)
-	if parent != nil {
-		opts := []opentracing.StartSpanOption{
-			opentracing.ChildOf(parent.Context()),
-			ottag.SpanKindRPCClient,
-		}
-		span = parent.Tracer().StartSpan("DB Query", opts...)
-	} else {
-		span = opentracing.StartSpan("DB Query")
-	}
+	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Query")
 	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
 	defer span.Finish()
 	rows, err := db.DB.Query(sql, args...)
@@ -258,17 +248,7 @@ func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
-	var span opentracing.Span
-	parent := opentracing.SpanFromContext(db.ctx)
-	if parent != nil {
-		opts := []opentracing.StartSpanOption{
-			opentracing.ChildOf(parent.Context()),
-			ottag.SpanKindRPCClient,
-		}
-		span = parent.Tracer().StartSpan("DB Exec", opts...)
-	} else {
-		span = opentracing.StartSpan("DB Exec")
-	}
+	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Exec")
 	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
 	defer span.Finish()
 	result, err := db.DB.Exec(sql, args...)
