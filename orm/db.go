@@ -278,6 +278,9 @@ func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
 	return result, err
 }
 
+func (db *TracedDB) SetError(error)  {
+}
+
 func logErrorToSpan(span opentracing.Span, err error) {
 	ottag.Error.Set(span, true)
 	span.LogFields(otlog.Error(err))

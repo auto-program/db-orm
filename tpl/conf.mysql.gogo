@@ -49,12 +49,4 @@ func MySQL() *orm.DBStore {
 	return _mysql_store
 }
 
-func QuerySession(ctx context.Context) *orm.DBQuerySession {
-	store := MySQL()
-	return &orm.DBQuerySession{
-		DBStore: store,
-		Ctx:     ctx,
-	}
-}
-
 {{end}}
