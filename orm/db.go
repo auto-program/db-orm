@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
-
 	"strings"
+	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 )
 
 type DB interface {
@@ -23,6 +24,11 @@ type DBStore struct {
 	*sql.DB
 	debug   bool
 	slowlog time.Duration
+}
+
+type DBQuerySession struct {
+	*DBStore
+	Ctx context.Context
 }
 
 func NewDBStore(driver, host string, port int, database, username, password string) (*DBStore, error) {
@@ -99,6 +105,44 @@ func (store *DBStore) Query(sql string, args ...interface{}) (*sql.Rows, error) 
 	return store.DB.Query(sql, args...)
 }
 
+func (store *DBQuerySession) Query(sql string, args ...interface{}) (*sql.Rows, error) {
+	if store.Ctx != nil {
+		parent := opentracing.SpanFromContext(store.Ctx)
+		var span opentracing.Span
+		if parent != nil {
+			opts := []opentracing.StartSpanOption{
+				opentracing.ChildOf(parent.Context()),
+				ext.SpanKindRPCClient,
+			}
+			span = parent.Tracer().StartSpan("DB Query", opts...)
+		} else {
+			span = opentracing.StartSpan("DB Query")
+		}
+		span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+		defer span.Finish()
+	}
+	return store.DBStore.Query(sql, args...)
+}
+
+func (store *DBQuerySession) Exec(sql string, args ...interface{}) (sql.Result, error) {
+	if store.Ctx != nil {
+		parent := opentracing.SpanFromContext(store.Ctx)
+		var span opentracing.Span
+		if parent != nil {
+			opts := []opentracing.StartSpanOption{
+				opentracing.ChildOf(parent.Context()),
+				ext.SpanKindRPCClient,
+			}
+			span = parent.Tracer().StartSpan("DB Exec", opts...)
+		} else {
+			span = opentracing.StartSpan("DB Exec")
+		}
+		span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+		defer span.Finish()
+	}
+	return store.DBStore.Exec(sql, args...)
+}
+
 func (store *DBStore) Exec(sql string, args ...interface{}) (sql.Result, error) {
 	t1 := time.Now()
 	if store.slowlog > 0 {
@@ -163,6 +207,20 @@ func (tx *DBTx) Close() error {
 }
 
 func (tx *DBTx) Query(sql string, args ...interface{}) (result *sql.Rows, err error) {
+	parent := opentracing.SpanFromContext(tx.ctx)
+	var span opentracing.Span
+	if parent != nil {
+		opts := []opentracing.StartSpanOption{
+			opentracing.ChildOf(parent.Context()),
+			ext.SpanKindRPCClient,
+		}
+		span = parent.Tracer().StartSpan("TX Query", opts...)
+	} else {
+		span = opentracing.StartSpan("TX Query")
+	}
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+
 	t1 := time.Now()
 	if tx.slowlog > 0 {
 		defer func(t time.Time) {
@@ -187,6 +245,20 @@ func (tx *DBTx) Query(sql string, args ...interface{}) (result *sql.Rows, err er
 }
 
 func (tx *DBTx) Exec(sql string, args ...interface{}) (result sql.Result, err error) {
+	parent := opentracing.SpanFromContext(tx.ctx)
+	var span opentracing.Span
+	if parent != nil {
+		opts := []opentracing.StartSpanOption{
+			opentracing.ChildOf(parent.Context()),
+			ext.SpanKindRPCClient,
+		}
+		span = parent.Tracer().StartSpan("TX Exec", opts...)
+	} else {
+		span = opentracing.StartSpan("TX Exec")
+	}
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+
 	t1 := time.Now()
 	if tx.slowlog > 0 {
 		defer func(t time.Time) {
