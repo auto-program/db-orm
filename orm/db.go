@@ -22,7 +22,7 @@ type DB interface {
 
 type TracedDB struct {
 	DB
-	Ctx context.Context
+	ctx context.Context
 }
 
 type DBStore struct {
@@ -43,7 +43,7 @@ type DBTx struct {
 func OpenTrace(ctx context.Context, db DB) DB {
 	return &TracedDB{
 		DB:  db,
-		Ctx: ctx,
+		ctx: ctx,
 	}
 }
 
@@ -236,8 +236,8 @@ func (tx *DBTx) SetContext(ctx context.Context) {
 }
 
 func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
-	if db.Ctx != nil {
-		parent := opentracing.SpanFromContext(db.Ctx)
+	if db.ctx != nil {
+		parent := opentracing.SpanFromContext(db.ctx)
 		var span opentracing.Span
 		if parent != nil {
 			opts := []opentracing.StartSpanOption{
@@ -255,8 +255,8 @@ func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
-	if db.Ctx != nil {
-		parent := opentracing.SpanFromContext(db.Ctx)
+	if db.ctx != nil {
+		parent := opentracing.SpanFromContext(db.ctx)
 		var span opentracing.Span
 		if parent != nil {
 			opts := []opentracing.StartSpanOption{
