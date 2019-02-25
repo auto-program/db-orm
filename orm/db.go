@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
-
 	"strings"
+	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/opentracing/opentracing-go"
+	ottag "github.com/opentracing/opentracing-go/ext"
+	otlog "github.com/opentracing/opentracing-go/log"
 )
 
 type DB interface {
@@ -19,10 +21,36 @@ type DB interface {
 	SetError(err error)
 }
 
+type TracedDB struct {
+	DB
+	ctx context.Context
+}
+
 type DBStore struct {
 	*sql.DB
 	debug   bool
 	slowlog time.Duration
+}
+
+type DBTx struct {
+	tx           *sql.Tx
+	debug        bool
+	slowlog      time.Duration
+	err          error
+	rowsAffected int64
+	ctx          context.Context
+}
+
+func OpenTrace(ctx context.Context, db DB) DB {
+	return &TracedDB{
+		DB:  db,
+		ctx: ctx,
+	}
+}
+
+type DBQuerySession struct {
+	*DBStore
+	Ctx context.Context
 }
 
 func NewDBStore(driver, host string, port int, database, username, password string) (*DBStore, error) {
@@ -125,15 +153,6 @@ func (store *DBStore) Close() error {
 	return nil
 }
 
-type DBTx struct {
-	tx           *sql.Tx
-	debug        bool
-	slowlog      time.Duration
-	err          error
-	rowsAffected int64
-	ctx          context.Context
-}
-
 func (store *DBStore) BeginTx(ctx context.Context) (*DBTx, error) {
 	tx, err := store.Begin()
 	if err != nil {
@@ -215,4 +234,34 @@ func (tx *DBTx) SetError(err error) {
 
 func (tx *DBTx) SetContext(ctx context.Context) {
 	tx.ctx = ctx
+}
+
+func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
+	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Query")
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+	rows, err := db.DB.Query(sql, args...)
+	if err != nil {
+		logErrorToSpan(span, err)
+	}
+	return rows, err
+}
+
+func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
+	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Exec")
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+	result, err := db.DB.Exec(sql, args...)
+	if err != nil {
+		logErrorToSpan(span, err)
+	}
+	return result, err
+}
+
+func (db *TracedDB) SetError(error)  {
+}
+
+func logErrorToSpan(span opentracing.Span, err error) {
+	ottag.Error.Set(span, true)
+	span.LogFields(otlog.Error(err))
 }
