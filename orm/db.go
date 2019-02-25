@@ -238,7 +238,7 @@ func (tx *DBTx) SetContext(ctx context.Context) {
 
 func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
 	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Query")
-	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	span.SetTag("sql.query", fmt.Sprint(sql, args))
 	defer span.Finish()
 	rows, err := db.DB.Query(sql, args...)
 	if err != nil {
@@ -249,7 +249,7 @@ func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
 
 func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
 	span, _ := opentracing.StartSpanFromContext(db.ctx, "DB Exec")
-	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	span.SetTag("sql.query", fmt.Sprint(sql, args))
 	defer span.Finish()
 	result, err := db.DB.Exec(sql, args...)
 	if err != nil {
