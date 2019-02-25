@@ -11,7 +11,8 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
+	ottag "github.com/opentracing/opentracing-go/ext"
+	otlog "github.com/opentracing/opentracing-go/log"
 )
 
 type DB interface {
@@ -236,39 +237,48 @@ func (tx *DBTx) SetContext(ctx context.Context) {
 }
 
 func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
-	if db.ctx != nil {
-		parent := opentracing.SpanFromContext(db.ctx)
-		var span opentracing.Span
-		if parent != nil {
-			opts := []opentracing.StartSpanOption{
-				opentracing.ChildOf(parent.Context()),
-				ext.SpanKindRPCClient,
-			}
-			span = parent.Tracer().StartSpan("DB Query", opts...)
-		} else {
-			span = opentracing.StartSpan("DB Query")
+	var span opentracing.Span
+	parent := opentracing.SpanFromContext(db.ctx)
+	if parent != nil {
+		opts := []opentracing.StartSpanOption{
+			opentracing.ChildOf(parent.Context()),
+			ottag.SpanKindRPCClient,
 		}
-		span.SetTag("sql.query", fmt.Sprintf(sql, args...))
-		defer span.Finish()
+		span = parent.Tracer().StartSpan("DB Query", opts...)
+	} else {
+		span = opentracing.StartSpan("DB Query")
 	}
-	return db.DB.Query(sql, args...)
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+	rows, err := db.DB.Query(sql, args...)
+	if err != nil {
+		logErrorToSpan(span, err)
+	}
+	return rows, err
 }
 
 func (db *TracedDB) Exec(sql string, args ...interface{}) (sql.Result, error) {
-	if db.ctx != nil {
-		parent := opentracing.SpanFromContext(db.ctx)
-		var span opentracing.Span
-		if parent != nil {
-			opts := []opentracing.StartSpanOption{
-				opentracing.ChildOf(parent.Context()),
-				ext.SpanKindRPCClient,
-			}
-			span = parent.Tracer().StartSpan("DB Exec", opts...)
-		} else {
-			span = opentracing.StartSpan("DB Exec")
+	var span opentracing.Span
+	parent := opentracing.SpanFromContext(db.ctx)
+	if parent != nil {
+		opts := []opentracing.StartSpanOption{
+			opentracing.ChildOf(parent.Context()),
+			ottag.SpanKindRPCClient,
 		}
-		span.SetTag("sql.query", fmt.Sprintf(sql, args...))
-		defer span.Finish()
+		span = parent.Tracer().StartSpan("DB Exec", opts...)
+	} else {
+		span = opentracing.StartSpan("DB Exec")
 	}
-	return db.DB.Exec(sql, args...)
+	span.SetTag("sql.query", fmt.Sprintf(sql, args...))
+	defer span.Finish()
+	result, err := db.DB.Exec(sql, args...)
+	if err != nil {
+		logErrorToSpan(span, err)
+	}
+	return result, err
+}
+
+func logErrorToSpan(span opentracing.Span, err error) {
+	ottag.Error.Set(span, true)
+	span.LogFields(otlog.Error(err))
 }
