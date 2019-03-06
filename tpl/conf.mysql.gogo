@@ -27,7 +27,7 @@ func MySQLSetup(cf *MySQLConfig) {
 	_mysql_cfg = *cf
 }
 
-func MySQL() *orm.DBStore {
+func MySQL() orm.DB {
 	var err error
 	_mysql_once.Do(func() {
 		_mysql_store, err = orm.NewDBStore("mysql",

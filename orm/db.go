@@ -15,10 +15,12 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 )
 
+
 type DB interface {
 	Query(sql string, args ...interface{}) (*sql.Rows, error)
 	Exec(sql string, args ...interface{}) (sql.Result, error)
 	SetError(err error)
+	BeginTx(ctx context.Context) (TX, error)
 }
 
 type TracedDB struct {
@@ -32,14 +34,22 @@ type DBStore struct {
 	slowlog time.Duration
 }
 
+type TX interface {
+	Close() error
+	GetContext() context.Context
+	DB
+}
+
+
 type DBTx struct {
 	tx           *sql.Tx
 	debug        bool
 	slowlog      time.Duration
 	err          error
 	rowsAffected int64
-	Ctx          context.Context
+	ctx          context.Context
 }
+
 
 func OpenTrace(ctx context.Context, db DB) DB {
 	return &TracedDB{
@@ -153,7 +163,7 @@ func (store *DBStore) Close() error {
 	return nil
 }
 
-func (store *DBStore) BeginTx(ctx context.Context) (*DBTx, error) {
+func (store *DBStore) BeginTx(ctx context.Context) (TX, error) {
 	tx, err := store.Begin()
 	if err != nil {
 		return nil, err
@@ -163,15 +173,19 @@ func (store *DBStore) BeginTx(ctx context.Context) (*DBTx, error) {
 		tx:      tx,
 		debug:   store.debug,
 		slowlog: store.slowlog,
-		Ctx:     ctx,
+		ctx:     ctx,
 	}, nil
 }
 
+func (tx *DBTx) BeginTx(ctx context.Context) (TX, error) {
+	return tx, nil
+}
+
 func (tx *DBTx) Close() error {
-	if tx.Ctx != nil {
+	if tx.ctx != nil {
 		select {
-		case <-tx.Ctx.Done():
-			tx.err = tx.Ctx.Err()
+		case <-tx.ctx.Done():
+			tx.err = tx.ctx.Err()
 		default:
 		}
 	}
@@ -195,8 +209,8 @@ func (tx *DBTx) Query(sql string, args ...interface{}) (result *sql.Rows, err er
 		log.Println("DEBUG: ", sql, args)
 	}
 
-	if tx.Ctx != nil {
-		result, err = tx.tx.QueryContext(tx.Ctx, sql, args...)
+	if tx.ctx != nil {
+		result, err = tx.tx.QueryContext(tx.ctx, sql, args...)
 		tx.err = err
 		return
 	}
@@ -218,8 +232,8 @@ func (tx *DBTx) Exec(sql string, args ...interface{}) (result sql.Result, err er
 	if tx.debug {
 		log.Println("DEBUG: ", sql, args)
 	}
-	if tx.Ctx != nil {
-		result, err = tx.tx.ExecContext(tx.Ctx, sql, args...)
+	if tx.ctx != nil {
+		result, err = tx.tx.ExecContext(tx.ctx, sql, args...)
 		tx.err = err
 		return
 	}
@@ -233,7 +247,11 @@ func (tx *DBTx) SetError(err error) {
 }
 
 func (tx *DBTx) SetContext(ctx context.Context) {
-	tx.Ctx = ctx
+	tx.ctx = ctx
+}
+
+func (tx *DBTx) GetContext() context.Context {
+	return tx.ctx
 }
 
 func (db *TracedDB) Query(sql string, args ...interface{}) (*sql.Rows, error) {
