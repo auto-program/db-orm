@@ -37,6 +37,12 @@ type DBStore struct {
 type TX interface {
 	Close() error
 	GetContext() context.Context
+	Prepare(query string) (*sql.Stmt, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	DB
 }
 
@@ -50,6 +56,25 @@ type DBTx struct {
 	ctx          context.Context
 }
 
+func (tx *DBTx) Prepare(query string) (*sql.Stmt, error) {
+	return tx.tx.Prepare(query)
+}
+
+func (tx *DBTx) QueryRow(query string, args ...interface{}) *sql.Row {
+    return tx.tx.QueryRow(query, args...)
+}
+
+func (tx *DBTx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+    return tx.tx.ExecContext(ctx, query, args...)
+}
+
+func (tx *DBTx) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+    return tx.tx.QueryContext(ctx, query, args...)
+}
+
+func (tx *DBTx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+    return tx.tx.QueryRowContext(ctx, query, args...)
+}
 
 func OpenTrace(ctx context.Context, db DB) DB {
 	return &TracedDB{
